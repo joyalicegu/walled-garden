@@ -1,5 +1,5 @@
 from mazegen import mazeGenerator
-from Tkinter import *
+from tkinter import *
 
 def drawWall(wall, canvas, cellSize, margin):
     rows = [cell[0] for cell in wall]
@@ -14,7 +14,7 @@ def drawWall(wall, canvas, cellSize, margin):
         y0 = max(rows)
         x1 = cols[0] + 1
         y1 = max(rows)
-    splat = tuple(map(lambda x: cellSize*x + margin, [x0, y0, x1, y1]))
+    splat = tuple([cellSize*x + margin for x in [x0, y0, x1, y1]])
     canvas.create_line(*splat)
 
 import sys, collections, random
@@ -62,8 +62,8 @@ def hsvToRgb(h, s, v):
                3: (0, x, 1), # cyan to blue (more blue than green)
                4: (x, 0, 1), # blue to purple (more blue than red)
                5: (1, 0, x)  # purple to red (more red than blue)
-               }[h/60] 
-    return tuple(map(lambda x: v*(x*s+1-s), [r, g, b]))
+               }[h//60] 
+    return tuple([v*(x*s+1-s) for x in [r, g, b]])
 
 def keyColorsFromScores(scores):
     minScore, maxScore = min(scores.values()), max(scores.values())

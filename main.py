@@ -5,6 +5,7 @@ from direct.interval.IntervalGlobal import *
 from direct.task.Task import Task
 from direct.gui.DirectGui import *
 import sys, random, math, collections
+from functools import reduce
 
 # OH NO! IT'S A GLOBAL VARIABLE.
 DIRECTIONS = [(-1,  0,  0), (+1,  0,  0),
@@ -116,7 +117,7 @@ def hsvToRgb(h, s, v):
                (x, 0, 1), # blue to purple (more blue than red)
                (1, 0, x)  # purple to red (more red than blue)
                ][h//60] 
-    return tuple(map(lambda x: v*s*(x-1)+v, [r, g, b]))
+    return tuple([v*s*(x-1)+v for x in [r, g, b]])
     # r, g, b are floats from 0 to 1 inclusive
 
 def keyColorsFromScores(scores):
@@ -255,7 +256,7 @@ def dodecahedron(size=1):
     for face in range(12):
         # Add vertices.
         for point in faces[face]:
-            vertices.addData3f(*map(lambda x: x*size/2.0, point))
+            vertices.addData3f(*[x*size/2.0 for x in point])
         # Add normals.
         for i in range(5): normals.addData3f(*norms[face])
         # Add face to primitive.
@@ -282,7 +283,7 @@ def sierpinskiDodecahedron(level=2, size=1):
                   + [(x, 0, z) for x in [-PHI**2, PHI**2] for z in [-1, 1]]
                   + [(x, y, 0) for x in [-1, 1] for y in [-PHI**2, PHI**2]])
         for i in range(20):
-            center[i].setPos(*map(lambda x: x*size/2.0, position[i]))
+            center[i].setPos(*[x*size/2.0 for x in position[i]])
         result.setScale(PHI/2)
         result.flattenStrong()
     return result
@@ -307,7 +308,7 @@ def icosahedron(size=1):
     for face in range(20):
         # Add vertices.
         for point in faces[face]:
-            vertices.addData3f(*map(lambda x: x*size/2.0, point))
+            vertices.addData3f(*[x*size/2.0 for x in point])
         # Add normals.
         for i in range(3): normals.addData3f(*norms[face])
         # Add face to primitive.
@@ -332,7 +333,7 @@ def sierpinskiIcosahedron(level=2, size=2):
                   + [(x, 0, z) for z in [-PHI, PHI] for x in [-1, 1]]
                   + [(x, y, 0) for x in [-PHI, PHI] for y in [-1, 1]])
         for i in range(12):
-            center[i].setPos(*map(lambda x: x*size/(PHI*2), position[i]))
+            center[i].setPos(*[x*size/(PHI*2) for x in position[i]])
         result.flattenStrong()
     return result
 
@@ -376,7 +377,7 @@ def mengerSponge(level=2, size=1):
                 if (x, y, z).count(0) < 2]:
             ms[key] = proto.copyTo(result)
         for key in ms:
-            ms[key].setPos(*map(lambda x: 2*size*x, key))
+            ms[key].setPos(*[2*size*x for x in key])
         result.flattenStrong()
     return result
 
@@ -397,7 +398,7 @@ def vicsekFractal(level=3, size=1):
                 if (x, y, z).count(0) in {0, 3}]:
             ms[key] = proto.copyTo(result)
         for key in ms:
-            ms[key].setPos(*map(lambda x: 2*size*x, key))
+            ms[key].setPos(*[2*size*x for x in key])
         result.flattenStrong()
     return result
 
@@ -443,7 +444,7 @@ def pythagorasFlake(level=5, size=0.2, angle=30):
     return result
 
 def scale(a, scalar):
-    return map(lambda x: x*scalar, a)
+    return [x*scalar for x in a]
 
 def cubeCornersFromWall(wall, cellSize, thickness):
     rows = [cell[0] for cell in wall]
@@ -481,13 +482,15 @@ def polygonCornersFromWall(wall, cellSize):
         return ((x0, y0, z), (x0, y1, z), (x1, y1, z), (x1, y0, z))
 
 def getCellFromPoint(cellSize, x, y, z):
-    return tuple(map(lambda x: int(x//cellSize), [y, x, z]))
+    return tuple([int(x//cellSize) for x in [y, x, z]])
 
 def getCellCenter(cellSize, row, col, lay):
-    return tuple(map(lambda x: cellSize * (x + 0.5), [col, row, lay]))
+    return tuple([cellSize * (x + 0.5) for x in [col, row, lay]])
 
-def cubeFromCorners((x0, y0, z0), (x1, y1, z1), cellColorDict=None,
+def cubeFromCorners(corner0, corner1, cellColorDict=None,
         cellSize=None):
+    (x0, y0, z0) = corner0
+    (x1, y1, z1) = corner1
     format = GeomVertexFormat.getV3n3c4()
     vertexData = GeomVertexData('cube', format, Geom.UHStatic)
     vertexData.setNumRows(24)
@@ -544,8 +547,10 @@ def cubeFromCorners((x0, y0, z0), (x1, y1, z1), cellColorDict=None,
     geom.addPrimitive(primitive)
     return geom
 
-def addCollisionPolygonsFromCorners((x0, y0, z0), (x1, y1, z1), node):
+def addCollisionPolygonsFromCorners(corner0, corner1, node):
     # Vertices are counterclockwise from the front.
+    (x0, y0, z0) = corner0
+    (x1, y1, z1) = corner1
     faces = [[(x0, y1, z0), (x0, y0, z0), (x0, y0, z1), (x0, y1, z1)],
              [(x1, y0, z0), (x1, y1, z0), (x1, y1, z1), (x1, y0, z1)], 
              [(x0, y0, z0), (x1, y0, z0), (x1, y0, z1), (x0, y0, z1)],
@@ -890,7 +895,7 @@ Left and right click to move forward and backward."""
 
         # Do ghost movement.
         Sequence(
-            Sequence(*map(ghostStep, path)),
+            Sequence(*list(map(ghostStep, path))),
             Func(lambda: flicker.finish()),
             Func(lambda: light.removeNode()),
             Func(lambda: ghost.removeNode())
@@ -924,7 +929,7 @@ Left and right click to move forward and backward."""
                     else:
                         return Sequence(self.camera.hprInterval(2, newHPR), move)
             return move
-        Sequence(*map(cameraStep, path[:-1])).start()
+        Sequence(*list(map(cameraStep, path[:-1]))).start()
 
     def lookAround(self, task):
         heading, pitch, roll = tuple(self.camera.getHpr())
@@ -995,7 +1000,7 @@ Left and right click to move forward and backward."""
     def controlCamera(self, task):
         cell = getCellFromPoint(self.cellSize, *self.camera.getPos())
         if cell != self.lastCell:
-            print cell, self.cellDistances[cell]
+            print(cell, self.cellDistances[cell])
         self.lastCell = cell
 
         heading, pitch, roll = tuple(self.camera.getHpr())
@@ -1052,7 +1057,7 @@ Left and right click to move forward and backward."""
         def doGrow():
             from functools import reduce
             Sequence(*reduce(lambda x, y: x + [Wait(1), Func(changeLevel, y)],
-                range(1, 6), [])).start()
+                list(range(1, 6)), [])).start()
 
         def startFlicker():
             # Make light flicker once every three seconds.
@@ -1069,10 +1074,10 @@ Left and right click to move forward and backward."""
         startFlicker()
         startRotation()
 
-from Tkinter import *
-import tkSimpleDialog, tkMessageBox
+from tkinter import *
+import tkinter.simpledialog, tkinter.messagebox
 
-class SettingsDialog(tkSimpleDialog.Dialog):
+class SettingsDialog(tkinter.simpledialog.Dialog):
     # Code adapted from:
     # http://effbot.org/tkinterbook/tkinter-dialog-windows.htm
     def ok(self, event=None):
@@ -1109,13 +1114,13 @@ class SettingsDialog(tkSimpleDialog.Dialog):
             lays = int(self.e3.get())
         except:
             self.result = ("Default", mouse)
-            tkMessageBox.showinfo("Message", "Proceeding with default dimensions.")
+            tkinter.messagebox.showinfo("Message", "Proceeding with default dimensions.")
             return True
         if (rows*cols*lays) <= 1:
-            tkMessageBox.showinfo("Message", "Maze is too small.")
+            tkinter.messagebox.showinfo("Message", "Maze is too small.")
             return False
         elif (rows*cols*lays) >= sys.getrecursionlimit():
-            tkMessageBox.showinfo("Message", "Maze is too large.")
+            tkinter.messagebox.showinfo("Message", "Maze is too large.")
             return False
         else:
             self.result = (rows, cols, lays, mouse)
